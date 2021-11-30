@@ -9,6 +9,12 @@ ALPH = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
 def nth(iterable, n, default=None):
 	return next(itertools.islice(iterable, n, None), default)
 
+def pairwise(iterable):
+    # pairwise('ABCDEFG') --> AB BC CD DE EF FG
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
 def format_text(file_name):
 	with open(file_name, 'r') as rf:
 		lower_cased = rf.read().lower()
@@ -118,8 +124,63 @@ def calculate_stats(input_text):
 		bi_freq[i]
 	return (mono_freq, bi_freq, H1, H2)
 
-def cryterium1_0(input_text):
+def criteria1_0(input_text, a_prh):
+	for prh_l_gram in a_prh:
+		if prh_l_gram in input_text:
+			return False
+	return True
 
+def criteria1_1(input_text, a_prh, k_p):
+	prh_encountered = 0
+	for prh_l_gram in a_prh:
+		if prh_l_gram in input_text:
+			prh_encountered += 1
+		if prh_encountered >= k_p:
+			return False
+	return True
+
+def criteria1_2(input_text, a_prh, theor_freq, mono_case=True):
+	pract_freq = collections.defaultdict(int)
+	l_gram_iterable = input_text if mono_case else pairwise(input_text)
+	for l_gram in l_gram_iterable:
+		pract_freq[l_gram] += 1
+		if pract_freq[l_gram] >= theor_freq[l_gram]:
+			return False
+	return True
+
+def criteria1_2(input_text, a_prh, theor_freq, mono_case=True):
+	pract_freq = collections.defaultdict(int)
+	l_gram_iterable = input_text if mono_case else pairwise(input_text)
+	for l_gram in l_gram_iterable:
+		pract_freq[l_gram] += 1
+
+	if sum(pract_freq.values()) >= sum(theor_freq[k] for k in pract_freq):
+		return False
+	return True
+
+def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2):
+
+	# crit_1_0 params
+	h_p_mono = 2 # у великому тексті усі букви зустрінуться !
+	h_p_bi = 15
+
+	# crit_1_1 params
+	k_p = 20
+
+	A_prh_mono = sorted(mono_freq, key=mono_freq.get)[h_p_mono]
+	A_prh_bi = sorted(bi_freq, key=bi_freq.get)[h_p_bi]
+
+
+	for text_piece_group in text_pieces:
+		print(f'crits for text group with L = {len(text_piece[0])}, N = {len(text_piece)}')
+		for text_piece in text_piece_group:
+
+			criteria1_0_mono_result = criteria1_0(text_piece, A_prh_mono)
+			criteria1_0_bi_result = criteria1_0(text_piece, A_prh_bi)
+			criteria1_1_mono_result = criteria1_1(text_piece, A_prh_mono, k_p)
+			criteria1_1_bi_result = criteria1_1(text_piece, A_prh_bi, k_p)
+			criteria1_2_mono_result = criteria1_1(text_piece, A_prh_mono, mono_freq, True)
+			criteria1_2_bi_result = criteria1_1(text_piece, A_prh_bi, bi_freq, False)
 
 if __name__ == '__main__':
 
@@ -131,7 +192,7 @@ if __name__ == '__main__':
 		(10,    10000),
 		(100,   10000),
 		(1000,  10000),
-		(10000, 1000)			# maybe need 10 million chars text for this? now have only 1 mill
+		(10000, 1000)
 	]
 
 	text_pieces = list(map(lambda x: cut_to_non_overlapping_text_pieces(text, *x), L_and_N))
@@ -146,9 +207,16 @@ if __name__ == '__main__':
 
 	mono_freq, bi_freq, H1, H2 = calculate_stats(text)
 
-	h_p = 5
-	A_prh_mono = sorted(mono_freq, key=mono_freq.get)[h_p]
-	A_prh_bi = sorted(bi_freq, key=bi_freq.get)[h_p]
-	
+	h_p_mono = 2 # у великому тексті усі букви зустрінуться !
+	h_p_bi = 15
+	A_prh_mono = sorted(mono_freq, key=mono_freq.get)[h_p_mono]
+	A_prh_bi = sorted(bi_freq, key=bi_freq.get)[h_p_bi]
 
-	cryterium1_0()
+	print(len(sorted({v:k for k,v in mono_freq.items()}.items())))
+	print(sorted({v:k for k,v in bi_freq.items()}.items()))
+
+
+	criteria1_0(text_pieces[0][0], A_prh_mono)
+	criteria1_0(text_pieces[0][0], A_prh_bi)
+
+	for text
