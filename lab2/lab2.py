@@ -1,3 +1,14 @@
+import re
+import itertools
+import random
+import collections
+import math
+
+ALPH = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
+
+def nth(iterable, n, default=None):
+	return next(itertools.islice(iterable, n, None), default)
+
 def format_text(file_name):
 	with open(file_name, 'r') as rf:
 		lower_cased = rf.read().lower()
@@ -12,8 +23,6 @@ def read_formatted_text(file_name):
 		return rf.read()
 
 def distort_text_pieces(method: str, input_texts: list) -> str:
-	
-	ALPH = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
 	c_to_v_mapping = dict(zip(ALPH, itertools.count(0)))
 	v_to_c_mapping = {v: k for k, v in c_to_v_mapping.items()}
 
@@ -75,8 +84,8 @@ def distort_text_pieces(method: str, input_texts: list) -> str:
 		return "".join(map(lambda x: v_to_cc_mapping[x], y))
 
 	result = []
-	#result = list(map(locals()[method], input_texts))
-	result = list(zip(input_texts, map(locals()[method], input_texts)))
+	result = list(map(locals()[method], input_texts))
+	#result = list(zip(input_texts, map(locals()[method], input_texts)))
 
 	return result
 
@@ -89,11 +98,34 @@ def cut_to_non_overlapping_text_pieces(input_text, piece_length, num_of_pieces) 
 			result.append(text_piece)
 	return result
 
+def calculate_stats(input_text):
+	mono_freq = collections.defaultdict(int)
+	bi_freq = collections.defaultdict(int)
+	input_len = len(input_text)
+	for i in range(0, input_len):
+		mono_freq[input_text[i]] += 1
+		if(len(input_text[i:i+2]) == 2):
+			bi_freq[input_text[i:i+2]] += 1 	# overlapping bigrams
+
+	H1 = - sum(map(lambda x:x/input_len * math.log(x/input_len, 2), mono_freq.values()))
+	H2 = -0.5 * sum(map(lambda x:x/input_len * math.log(x/input_len, 2), bi_freq.values()))
+	# I1 = sum(map(lambda x:x*(x-1), mono_freq.values())) / ((input_len) * (input_len - 1))
+	# I2 = sum(map(lambda x:x*(x-1), bi_freq.values())) / ((input_len) * (input_len - 1))
+
+	for i in ALPH:
+		mono_freq[i]
+	for i in itertools.product(ALPH, repeat=2):
+		bi_freq[i]
+	return (mono_freq, bi_freq, H1, H2)
+
+def cryterium1_0(input_text):
+
+
 if __name__ == '__main__':
 
 	random.seed(1)
 
-	text = read_formatted_text('output_file')
+	text = read_formatted_text('lab2/format_text')
 	
 	L_and_N = [
 		(10,    10000),
@@ -103,13 +135,20 @@ if __name__ == '__main__':
 	]
 
 	text_pieces = list(map(lambda x: cut_to_non_overlapping_text_pieces(text, *x), L_and_N))
-
-	text_pieces = list(map(lambda x: cut_to_non_overlapping_text_pieces(text, *x), L_and_N))
 	#print(f"text_len = {len(text)}, th's = {len(r[2])}, h of th's = {len(r[3])}")
 	#print(list(map(len, r[3])))
 	# print(r)
 	
-	print(distort_text_pieces('Vigenere', text_pieces[1]))
-	# print(distort_text_pieces('affine_subst_mono', text_pieces[0]))
-	print(distort_text_pieces('uniform_bi', text_pieces[0]))
-	print(distort_text_pieces('g_bi', text_pieces[0]))
+	# print(distort_text_pieces('Vigenere', text_pieces[1]))
+	# # print(distort_text_pieces('affine_subst_mono', text_pieces[0]))
+	# print(distort_text_pieces('uniform_bi', text_pieces[0]))
+	# print(distort_text_pieces('g_bi', text_pieces[0]))
+
+	mono_freq, bi_freq, H1, H2 = calculate_stats(text)
+
+	h_p = 5
+	A_prh_mono = sorted(mono_freq, key=mono_freq.get)[h_p]
+	A_prh_bi = sorted(bi_freq, key=bi_freq.get)[h_p]
+	
+
+	cryterium1_0()
