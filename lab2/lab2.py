@@ -197,6 +197,19 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		}
 	}
 
+	criteria5_0_js = {
+		'mono_case': {
+			'j1': 3,
+			'j2': 5,
+			'j3': 7,
+		},
+		'bi_case': {
+			'j1': 50,
+			'j2': 100,
+			'j3': 200,
+		}
+	}
+
 	nested_default_dict = lambda: collections.defaultdict(nested_default_dict)
 	criterias_and_params = {
 		'criteria1_0': nested_default_dict(),
@@ -218,29 +231,74 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		'criteria1_3': nested_default_dict(),
 		'criteria3_0': {
 			'mono_case': {
-				10:	   { 'k_H': 20 },
-				100:   { 'k_H': 20 },
-				1000:  { 'k_H': 20 },
-				10000: { 'k_H': 20 },
+				10:	   { 'k_H': 1 },
+				100:   { 'k_H': 0.8 },
+				1000:  { 'k_H': 0.7 },
+				10000: { 'k_H': 0.6 },
 			},
 			'bi_case': {
-				10:	   { 'k_H': 20 },
-				100:   { 'k_H': 20 },
-				1000:  { 'k_H': 20 },
-				10000: { 'k_H': 20 },
+				10:	   { 'k_H': 1 },
+				100:   { 'k_H': 0.8 },
+				1000:  { 'k_H': 0.7 },
+				10000: { 'k_H': 0.6 },
 			}
 		},
+		'criteria5_1_j1': {
+			'mono_case': {
+				10:	   { 'k_empt': 2 },
+				100:   { 'k_empt': 2 },
+				1000:  { 'k_empt': 2 },
+				10000: { 'k_empt': 2 },
+			},
+			'bi_case': {
+				10:	   { 'k_empt': 45 }, # 50 ящ, и 10 бигр. Если все бигр будут разн -> 40 пустіх
+				100:   { 'k_empt': 35 }, 
+				1000:  { 'k_empt': 25 },
+				10000: { 'k_empt': 15 },
+			}
+		},
+		'criteria5_1_j2': {
+			'mono_case': {
+				10:	   { 'k_empt': 2 },
+				100:   { 'k_empt': 2 },
+				1000:  { 'k_empt': 2 },
+				10000: { 'k_empt': 2 },
+			},
+			'bi_case': {
+				10:	   { 'k_empt': 95 }, # 100 ящ, и 10 бигр
+				100:   { 'k_empt': 70 },
+				1000:  { 'k_empt': 60 },
+				10000: { 'k_empt': 30 },
+			}
+		},
+		'criteria5_1_j3': {
+			'mono_case': {
+				10:	   { 'k_empt': 2 },
+				100:   { 'k_empt': 2 },
+				1000:  { 'k_empt': 2 },
+				10000: { 'k_empt': 2 },
+			},
+			'bi_case': {
+				10:	   { 'k_empt': 195 },
+				100:   { 'k_empt': 160 },
+				1000:  { 'k_empt': 70 },
+				10000: { 'k_empt': 40 },
+			}
+		}
 	}
 
 	# add a_prh_size param to 1_X criterias
-	for crits, l_cases in criterias_and_params.items():
-		if '1_' in crits:
-			for l_case, L_cases in l_cases.items():
+	for crit, l_cases in criterias_and_params.items():
+		if 'criteria1_' in crit:
+			for l_case, L_cases in A_prh_sizes.items():
 				for L, params in L_cases.items():
-					params['a_prh_size'] = A_prh_sizes[l_case][L]
+					criterias_and_params[crit][l_case][L]['a_prh_size'] = A_prh_sizes[l_case][L]
+					# params['a_prh_size'] = A_prh_sizes[l_case][L]
+
+	#print(criterias_and_params)
 
 	def criteria1_0(input_text, mono_case=True, a_prh_size=None):
-		a_prh = A_prh_mono[:a_prh_size] if mono_case else A_prh_bi[:a_prh_size]
+		a_prh = sorted_freq_mono[:a_prh_size] if mono_case else sorted_freq_bi[:a_prh_size]
 		#print(a_prh)
 		for prh_l_gram in a_prh:
 			if prh_l_gram in input_text:
@@ -248,7 +306,7 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		return True
 
 	def criteria1_1(input_text, mono_case=True, k_p=None, a_prh_size=None):
-		a_prh = A_prh_mono[:a_prh_size] if mono_case else A_prh_bi[:a_prh_size]
+		a_prh = sorted_freq_mono[:a_prh_size] if mono_case else sorted_freq_bi[:a_prh_size]
 		prh_encountered = 0
 		for prh_l_gram in a_prh:
 			if prh_l_gram in input_text:
@@ -258,8 +316,8 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		return True
 
 	def criteria1_2(input_text, mono_case=True, a_prh_size=None):
-		#print((mono_freq, A_prh_mono) if mono_case else (bi_freq, A_prh_bi))
-		theor_freq, a_prh = (mono_freq, A_prh_mono[:a_prh_size]) if mono_case else (bi_freq, A_prh_bi[:a_prh_size])
+		#print((mono_freq, sorted_freq_mono) if mono_case else (bi_freq, sorted_freq_bi))
+		theor_freq, a_prh = (mono_freq, sorted_freq_mono[:a_prh_size]) if mono_case else (bi_freq, sorted_freq_bi[:a_prh_size])
 		pract_freq = collections.defaultdict(int)
 		l_gram_iterable = input_text if mono_case else pairwise(input_text)
 		for l_gram in l_gram_iterable:
@@ -269,7 +327,7 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		return True
 
 	def criteria1_3(input_text, mono_case=True, a_prh_size=None):
-		theor_freq, a_prh = (mono_freq, A_prh_mono[:a_prh_size]) if mono_case else (bi_freq, A_prh_bi[:a_prh_size])
+		theor_freq, a_prh = (mono_freq, sorted_freq_mono[:a_prh_size]) if mono_case else (bi_freq, sorted_freq_bi[:a_prh_size])
 		pract_freq = collections.defaultdict(int)
 		l_gram_iterable = input_text if mono_case else pairwise(input_text)
 		for l_gram in l_gram_iterable:
@@ -286,18 +344,42 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		for l_gram in l_gram_iterable:
 			pract_freq[l_gram] += 1
 
-		pract_H = calculate_H(pract_freq, len(input_text))
+		pract_H = calculate_H(pract_freq, len(input_text), mono_case=mono_case)
+		#print(theor_H, pract_H)
 		if abs(theor_H - pract_H) > k_H:
 			return False
 		return True
 
-	# def criteria5_0()
+	def criteria5_0(input_text, mono_case=True, j=None, k_empt=None):
+		B_frq = sorted_freq_mono[-j:] if mono_case else sorted_freq_bi[-j:]
+		pract_freq = collections.defaultdict(int)
+		l_gram_iterable = input_text if mono_case else pairwise(input_text)
+		for l_gram in l_gram_iterable:
+			if l_gram in B_frq:
+				pract_freq[l_gram] += 1
+
+		if len(list(filter(lambda x: pract_freq[x]==0, B_frq))) >= k_empt:
+			return False
+		return True
+
+	def criteria5_1_j1(input_text, mono_case=True, k_empt=None):
+		j = criteria5_0_js['mono_case']['j1'] if mono_case else criteria5_0_js['bi_case']['j2']
+		return criteria5_0(input_text, mono_case=mono_case, j=j, k_empt=k_empt)
+
+	def criteria5_1_j2(input_text, mono_case=True, k_empt=None):
+		j = criteria5_0_js['mono_case']['j2'] if mono_case else criteria5_0_js['bi_case']['j2']
+		return criteria5_0(input_text, mono_case=mono_case, j=j, k_empt=k_empt)
+
+	def criteria5_1_j3(input_text, mono_case=True, k_empt=None):
+		j = criteria5_0_js['mono_case']['j3'] if mono_case else criteria5_0_js['bi_case']['j3']
+		return criteria5_0(input_text, mono_case=mono_case, j=j, k_empt=k_empt)
+
 
 	# # crit_1_1 params
 	# k_p = 20
 
-	A_prh_mono = sorted(mono_freq, key=mono_freq.get)
-	A_prh_bi = sorted(bi_freq, key=bi_freq.get)
+	sorted_freq_mono = sorted(mono_freq, key=mono_freq.get)
+	sorted_freq_bi = sorted(bi_freq, key=bi_freq.get)
 
 	for text_piece_group in text_pieces:
 		L = len(text_piece_group[0])
@@ -325,14 +407,13 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		# for text_piece in text_piece_group:
 
 		# 	criteria1_0_mono_result = criteria1_0(text_piece, A_prh_mono)
-		# 	criteria1_0_bi_result = criteria1_0(text_piece, A_prh_bi)
+		# 	criteria1_0_bi_result = criteria1_0(text_piece, sorted_freq_bi)
 		# 	criteria1_1_mono_result = criteria1_1(text_piece, A_prh_mono, k_p)
-		# 	criteria1_1_bi_result = criteria1_1(text_piece, A_prh_bi, k_p)
+		# 	criteria1_1_bi_result = criteria1_1(text_piece, sorted_freq_bi, k_p)
 		# 	criteria1_2_mono_result = criteria1_2(text_piece, A_prh_mono, mono_freq)
 		# 	criteria1_2_bi_result = criteria1_2(text_piece, A_prh_bi, bi_freq, mono_case=False)
 		# 	criteria1_3_mono_result = criteria1_3(text_piece, A_prh_mono, mono_freq)
 		# 	criteria1_3_bi_result = criteria1_3(text_piece, A_prh_bi, bi_freq, mono_case=False)
-			
 
 if __name__ == '__main__':
 
@@ -394,13 +475,13 @@ if __name__ == '__main__':
 		'g_bi',
 	]
 
-	# # for distorted
-	# for distortion_method in distortion_methods:
-	# 	print(f'checking criteria for {distortion_method} distortion method')
-	# 	distorted_text_piece_groups = []
-	# 	for text_piece_group in text_piece_groups:
-	# 		distorted_text_piece_groups.append(distort_text_pieces(distortion_method, text_piece_group))
-	# 	check_criterias(distorted_text_piece_groups, *stats)
+	# for distorted
+	for distortion_method in distortion_methods:
+		print(f'checking criteria for {distortion_method} distortion method')
+		distorted_text_piece_groups = []
+		for text_piece_group in text_piece_groups:
+			distorted_text_piece_groups.append(distort_text_pieces(distortion_method, text_piece_group))
+		check_criterias(distorted_text_piece_groups, *stats)
 
 	# for pure ukr literature
 	print(f'checking criteria for pure ukraining text')
