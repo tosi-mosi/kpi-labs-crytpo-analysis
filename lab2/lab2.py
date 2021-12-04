@@ -4,6 +4,7 @@ import random
 import collections
 import math
 import functools
+import operator
 
 ALPH = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
 
@@ -14,7 +15,7 @@ def pairwise(iterable):
     # pairwise('ABCDEFG') --> AB BC CD DE EF FG
     a, b = itertools.tee(iterable)
     next(b, None)
-    return zip(a, b)
+    return map(operator.add, a, b)
 
 def format_text(file_name):
 	with open(file_name, 'r') as rf:
@@ -77,10 +78,10 @@ def distort_text_pieces(method: str, input_texts: list):
 		return result
 
 	def uniform_mono(input_text):
-		return [v_to_c_mapping[round(random.uniform(0, len(ALPH)-1))] for i in range(len(input_text))]
+		return "".join([v_to_c_mapping[round(random.uniform(0, len(ALPH)-1))] for i in range(len(input_text))])
 
 	def uniform_bi(input_text):
-		return [v_to_cc_mapping[round(random.uniform(0, len(ALPH)**2-1))] for i in range(0, len(input_text), 2)]
+		return "".join([v_to_cc_mapping[round(random.uniform(0, len(ALPH)**2-1))] for i in range(0, len(input_text), 2)])
 
 	def g_mono(input_text):
 		y0 = random.randint(1, len(ALPH)-1)
@@ -97,7 +98,7 @@ def distort_text_pieces(method: str, input_texts: list):
 		y1 = random.randint(0, len(ALPH)**2-1)
 		y = [y0, y1]
 
-		for i in range(2, len(input_text), 2):
+		for i in range(4, len(input_text), 2):
 			y.append((y[-1]+y[-2])%len(ALPH)**2)
 
 		return "".join(map(lambda x: v_to_cc_mapping[x], y))
@@ -121,48 +122,133 @@ def cut_to_non_overlapping_text_pieces(input_text, piece_length, num_of_pieces) 
 			break
 	return result
 
-def calculate_stats(input_text):
-	mono_freq = collections.defaultdict(int)
-	bi_freq = collections.defaultdict(int)
-	input_len = len(input_text)
-	for i in range(0, input_len):
-		mono_freq[input_text[i]] += 1
-		if(len(input_text[i:i+2]) == 2):
-			bi_freq[input_text[i:i+2]] += 1 	# overlapping bigrams
+def calculate_freq(input_text, input_len, mono_case=True):
+	freq = collections.defaultdict(int)
+	if mono_case:
+		for i in range(0, input_len):
+			freq[input_text[i]] += 1
+	else:
+		for i in range(0, input_len):
+			if(len(input_text[i:i+2]) == 2):
+				freq[input_text[i:i+2]] += 1
 
-	H1 = - sum(map(lambda x:x/input_len * math.log(x/input_len, 2), mono_freq.values()))
-	H2 = -0.5 * sum(map(lambda x:x/input_len * math.log(x/input_len, 2), bi_freq.values()))
+	l_gram_iterable = ALPH if mono_case else pairwise(ALPH)
+	for i in l_gram_iterable:
+		freq[i]
+	#print(freq)
+	return freq
+
+def calculate_H(freq, input_len, mono_case=True):
+	unzero_an_iterable = lambda x: filter(lambda y: y!=0, x)
+	if mono_case:
+		# H1
+		return - sum(map(lambda x:x/input_len * math.log(x/input_len, 2), unzero_an_iterable(freq.values())))
+	else:
+		# H2
+		# should it be input_len - 1?
+		return -0.5 * sum(map(lambda x:x/(input_len-1) * math.log(x/(input_len-1), 2), unzero_an_iterable(freq.values())))
+
+def calculate_stats(input_text):
+	# mono_freq = collections.defaultdict(int)
+	# bi_freq = collections.defaultdict(int)
+	# input_len = len(input_text)
+	# for i in range(0, input_len):
+	# 	mono_freq[input_text[i]] += 1
+	# 	if(len(input_text[i:i+2]) == 2):
+	# 		bi_freq[input_text[i:i+2]] += 1 	# overlapping bigrams
+
+	input_len = len(input_text)
+	mono_freq = calculate_freq(input_text, input_len)
+	bi_freq   = calculate_freq(input_text, input_len, mono_case=False)
+
+	# unzero_an_iterable = lambda x: filter(lambda y: y!=0, x)
+	# H1 = - sum(map(lambda x:x/input_len * math.log(x/input_len, 2), unzero_an_iterable(mono_freq.values())))
+	# H2 = -0.5 * sum(map(lambda x:x/(input_len-1) * math.log(x/(input_len-1), 2), unzero_an_iterable(bi_freq.values())))		# should it be input_len - 1?
+	H1 = calculate_H(mono_freq, input_len)
+	H2 = calculate_H(bi_freq, input_len, mono_case=False)	
+	print(f'H1={H1}, H2={H2}')
+
 	# I1 = sum(map(lambda x:x*(x-1), mono_freq.values())) / ((input_len) * (input_len - 1))
 	# I2 = sum(map(lambda x:x*(x-1), bi_freq.values())) / ((input_len) * (input_len - 1))
 
-	for i in ALPH:
-		mono_freq[i]
-	for i in itertools.product(ALPH, repeat=2):
-		bi_freq[i]
+	# for i in ALPH:
+	# 	mono_freq[i]
+	# for i in itertools.product(ALPH, repeat=2):
+	# 	bi_freq[i]
 	return (mono_freq, bi_freq, H1, H2)
 
 
 
 def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=False):
 
-	criterias_and_params = {
-		'criteria1_0': {},
-		'criteria1_1': {
-			'k_p': 20 				#?
+	# maybe different A_prh lengths for different Ls ?
+	A_prh_sizes = {
+		'mono_case': {
+			10:    3,
+			100:   3,
+			1000:  3,
+			10000: 3,
 		},
-		'criteria1_2': {},
-		'criteria1_3': {}
+		'bi_case': {
+			10:    10,
+			100:   10,
+			1000:  8,
+			10000: 8,
+		}
 	}
 
-	def criteria1_0(input_text, mono_case=True):
-		a_prh = A_prh_mono if mono_case else A_prh_bi
+	nested_default_dict = lambda: collections.defaultdict(nested_default_dict)
+	criterias_and_params = {
+		'criteria1_0': nested_default_dict(),
+		'criteria1_1': {
+			'mono_case': {
+				10:    { 'k_p': 5 },
+				100:   { 'k_p': 2 },
+				1000:  { 'k_p': 1 },
+				10000: { 'k_p': 1 },
+			},
+			'bi_case': {
+				10:	   { 'k_p': 15 },
+				100:   { 'k_p': 10 },
+				1000:  { 'k_p': 5 },
+				10000: { 'k_p': 5 },
+			}
+		},
+		'criteria1_2': nested_default_dict(),
+		'criteria1_3': nested_default_dict(),
+		'criteria3_0': {
+			'mono_case': {
+				10:	   { 'k_H': 20 },
+				100:   { 'k_H': 20 },
+				1000:  { 'k_H': 20 },
+				10000: { 'k_H': 20 },
+			},
+			'bi_case': {
+				10:	   { 'k_H': 20 },
+				100:   { 'k_H': 20 },
+				1000:  { 'k_H': 20 },
+				10000: { 'k_H': 20 },
+			}
+		},
+	}
+
+	# add a_prh_size param to 1_X criterias
+	for crits, l_cases in criterias_and_params.items():
+		if '1_' in crits:
+			for l_case, L_cases in l_cases.items():
+				for L, params in L_cases.items():
+					params['a_prh_size'] = A_prh_sizes[l_case][L]
+
+	def criteria1_0(input_text, mono_case=True, a_prh_size=None):
+		a_prh = A_prh_mono[:a_prh_size] if mono_case else A_prh_bi[:a_prh_size]
+		#print(a_prh)
 		for prh_l_gram in a_prh:
 			if prh_l_gram in input_text:
 				return False
 		return True
 
-	def criteria1_1(input_text, mono_case=True, k_p=None):
-		a_prh = A_prh_mono if mono_case else A_prh_bi
+	def criteria1_1(input_text, mono_case=True, k_p=None, a_prh_size=None):
+		a_prh = A_prh_mono[:a_prh_size] if mono_case else A_prh_bi[:a_prh_size]
 		prh_encountered = 0
 		for prh_l_gram in a_prh:
 			if prh_l_gram in input_text:
@@ -171,9 +257,9 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 				return False
 		return True
 
-	def criteria1_2(input_text, mono_case=True):
+	def criteria1_2(input_text, mono_case=True, a_prh_size=None):
 		#print((mono_freq, A_prh_mono) if mono_case else (bi_freq, A_prh_bi))
-		theor_freq, a_prh = (mono_freq, A_prh_mono) if mono_case else (bi_freq, A_prh_bi)
+		theor_freq, a_prh = (mono_freq, A_prh_mono[:a_prh_size]) if mono_case else (bi_freq, A_prh_bi[:a_prh_size])
 		pract_freq = collections.defaultdict(int)
 		l_gram_iterable = input_text if mono_case else pairwise(input_text)
 		for l_gram in l_gram_iterable:
@@ -182,8 +268,8 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 				return False
 		return True
 
-	def criteria1_3(input_text, mono_case=True):
-		theor_freq, a_prh = (mono_freq, A_prh_mono) if mono_case else (bi_freq, A_prh_bi)
+	def criteria1_3(input_text, mono_case=True, a_prh_size=None):
+		theor_freq, a_prh = (mono_freq, A_prh_mono[:a_prh_size]) if mono_case else (bi_freq, A_prh_bi[:a_prh_size])
 		pract_freq = collections.defaultdict(int)
 		l_gram_iterable = input_text if mono_case else pairwise(input_text)
 		for l_gram in l_gram_iterable:
@@ -193,36 +279,46 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 			return False
 		return True
 
-	# crit_1_0 params
-	h_p_mono = 2 # у великому тексті усі букви зустрінуться !
-	h_p_bi = 15
+	def criteria3_0(input_text, mono_case=True, k_H=None):
+		theor_freq, theor_H = (mono_freq, H1) if mono_case else (bi_freq, H2)
+		pract_freq = collections.defaultdict(int)
+		l_gram_iterable = input_text if mono_case else pairwise(input_text)
+		for l_gram in l_gram_iterable:
+			pract_freq[l_gram] += 1
 
-	# crit_1_1 params
-	k_p = 20
+		pract_H = calculate_H(pract_freq, len(input_text))
+		if abs(theor_H - pract_H) > k_H:
+			return False
+		return True
 
-	A_prh_mono = sorted(mono_freq, key=mono_freq.get)[h_p_mono]
-	A_prh_bi = sorted(bi_freq, key=bi_freq.get)[h_p_bi]
+	# def criteria5_0()
 
+	# # crit_1_1 params
+	# k_p = 20
+
+	A_prh_mono = sorted(mono_freq, key=mono_freq.get)
+	A_prh_bi = sorted(bi_freq, key=bi_freq.get)
 
 	for text_piece_group in text_pieces:
-		print(f'  crits for text group with L = {len(text_piece_group)}, N = {len(text_piece_group)}')
+		L = len(text_piece_group[0])
+		print(f'  crits for text group with L = {L}, N = {len(text_piece_group)}')
 
 		if not sentient_ukr_text:
 			print(f'    {"":<15} {"f_n_mono":<15} {"f_n_bi":<15}')
 		else:
 			print(f'    {"":<15} {"f_p_mono":<15} {"f_p_bi":<15}')
 		for crit_name, crit_params in criterias_and_params.items():
-			crit_results_mono = list(map(functools.partial(locals()[crit_name], **crit_params), text_piece_group))
-			crit_results_bi = list(map(functools.partial(locals()[crit_name], **crit_params, mono_case=False), text_piece_group))
+			crit_results_mono = list(map(functools.partial(locals()[crit_name], **crit_params['mono_case'][L]), text_piece_group))
+			crit_results_bi = list(map(functools.partial(locals()[crit_name], **crit_params['bi_case'][L], mono_case=False), text_piece_group))
 
 			if not sentient_ukr_text:
 				# calculate false Negative
-				f_prob_mono = crit_results_mono.count(False)/len(crit_results_mono)
-				f_prob_bi = crit_results_bi.count(False)/len(crit_results_bi)
-			else:
-				# calculate false Positive
 				f_prob_mono = crit_results_mono.count(True)/len(crit_results_mono)
 				f_prob_bi = crit_results_bi.count(True)/len(crit_results_bi)
+			else:
+				# calculate false Positive
+				f_prob_mono = crit_results_mono.count(False)/len(crit_results_mono)
+				f_prob_bi = crit_results_bi.count(False)/len(crit_results_bi)
 
 			print(f'    {crit_name:<15} {round(f_prob_mono, 13):<15} {round(f_prob_bi, 8):<15}')
 		# filter()
@@ -242,7 +338,6 @@ if __name__ == '__main__':
 
 	random.seed(1)
 
-	# text = read_formatted_text('lab2/format_text')
 	text = read_formatted_text('lab2/formatted_ukr.txt')	
 	
 	L_and_N = [
@@ -299,14 +394,14 @@ if __name__ == '__main__':
 		'g_bi',
 	]
 
-	# for distorted
-	for distortion_method in distortion_methods:
-		print(f'checking criteria for {distortion_method} distortion method')
-		distorted_text_piece_groups = []
-		for text_piece_group in text_piece_groups:
-			distorted_text_piece_groups.append(distort_text_pieces(distortion_method, text_piece_group))
-		check_criterias(distorted_text_piece_groups, *stats)
+	# # for distorted
+	# for distortion_method in distortion_methods:
+	# 	print(f'checking criteria for {distortion_method} distortion method')
+	# 	distorted_text_piece_groups = []
+	# 	for text_piece_group in text_piece_groups:
+	# 		distorted_text_piece_groups.append(distort_text_pieces(distortion_method, text_piece_group))
+	# 	check_criterias(distorted_text_piece_groups, *stats)
 
 	# for pure ukr literature
 	print(f'checking criteria for pure ukraining text')
-	check_criterias(text_piece_groups, *stats)
+	check_criterias(text_piece_groups, *stats, sentient_ukr_text=True)
