@@ -47,15 +47,22 @@ def distort_text_pieces(method: str, input_texts: list):
 	cc_to_v_mapping = dict(zip(map(lambda x: "".join(x), itertools.product(ALPH, repeat=2)), itertools.count(0)))
 	v_to_cc_mapping = {v: k for k, v in cc_to_v_mapping.items()}
 
-	def Vigenere(input_text):
+	def Vigenere(input_text, r):
 		result = ''
-
-		r = 5
 		key = "".join(random.choices(ALPH, k = r))
 
 		for i in range(len(input_text)):
 			result += v_to_c_mapping[(c_to_v_mapping[input_text[i]] + c_to_v_mapping[key[i%r]]) % len(ALPH)]
 		return result
+
+	def Vigenere_r1(input_text):
+		return Vigenere(input_text, 1)
+
+	def Vigenere_r5(input_text):
+		return Vigenere(input_text, 5)
+
+	def Vigenere_r10(input_text):
+		return Vigenere(input_text, 10)		
 
 	def affine_subst_mono(input_text):
 		result = ''
@@ -231,9 +238,9 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		'criteria1_3': nested_default_dict(),
 		'criteria3_0': {
 			'mono_case': {
-				10:	   { 'k_H': 1 },
-				100:   { 'k_H': 0.8 },
-				1000:  { 'k_H': 0.7 },
+				10:	   { 'k_H': 2 },
+				100:   { 'k_H': 1.5 },
+				1000:  { 'k_H': 1.2 },
 				10000: { 'k_H': 0.6 },
 			},
 			'bi_case': {
@@ -402,7 +409,7 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 				f_prob_mono = crit_results_mono.count(False)/len(crit_results_mono)
 				f_prob_bi = crit_results_bi.count(False)/len(crit_results_bi)
 
-			print(f'    {crit_name:<15} {round(f_prob_mono, 13):<15} {round(f_prob_bi, 8):<15}')
+			print(f'    {crit_name:<15} {round(f_prob_mono, 13):<15} {round(f_prob_bi, 13):<15}')
 		# filter()
 		# for text_piece in text_piece_group:
 
@@ -466,7 +473,9 @@ if __name__ == '__main__':
 	stats = calculate_stats(text)
 
 	distortion_methods = [
-		'Vigenere',
+		'Vigenere_r1',
+		'Vigenere_r5',
+		'Vigenere_r10',
 		'affine_subst_mono',
 		'affine_subst_bi',
 		'uniform_mono',
