@@ -5,10 +5,17 @@ import collections
 import math
 import functools
 import operator
+import bz2
 
-from criteria_params import criterias_and_params, criteria5_0_js
+from criteria_params import *
 
 ALPH = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
+
+c_to_v_mapping = dict(zip(ALPH, itertools.count(0)))
+v_to_c_mapping = {v: k for k, v in c_to_v_mapping.items()}
+
+cc_to_v_mapping = dict(zip(map(lambda x: "".join(x), itertools.product(ALPH, repeat=2)), itertools.count(0)))
+v_to_cc_mapping = {v: k for k, v in cc_to_v_mapping.items()}
 
 def nth(iterable, n, default=None):
 	return next(itertools.islice(iterable, n, None), default)
@@ -32,6 +39,11 @@ def read_formatted_text(file_name):
 	with open(file_name, 'r') as rf:
 		return rf.read()
 
+# c_to_v_mapping = dict(zip(ALPH, itertools.count(0)))
+# v_to_c_mapping = {v: k for k, v in c_to_v_mapping.items()}
+def uniformly_distributed_text(input_text_len):
+	return "".join([v_to_c_mapping[round(random.uniform(0, len(ALPH)-1))] for i in range(input_text_len)])
+
 """
 delete this
 return {
@@ -43,11 +55,6 @@ delete this
 # returns [[text_pieces_L10_N10000:...], [text_pieces_L100_N10000:...], ...]
 """
 def distort_text_pieces(method: str, input_texts: list):
-	c_to_v_mapping = dict(zip(ALPH, itertools.count(0)))
-	v_to_c_mapping = {v: k for k, v in c_to_v_mapping.items()}
-
-	cc_to_v_mapping = dict(zip(map(lambda x: "".join(x), itertools.product(ALPH, repeat=2)), itertools.count(0)))
-	v_to_cc_mapping = {v: k for k, v in cc_to_v_mapping.items()}
 
 	def Vigenere(input_text, r):
 		result = ''
@@ -87,7 +94,7 @@ def distort_text_pieces(method: str, input_texts: list):
 		return result
 
 	def uniform_mono(input_text):
-		return "".join([v_to_c_mapping[round(random.uniform(0, len(ALPH)-1))] for i in range(len(input_text))])
+		return uniformly_distributed_text(len(input_text))
 
 	def uniform_bi(input_text):
 		return "".join([v_to_cc_mapping[round(random.uniform(0, len(ALPH)**2-1))] for i in range(0, len(input_text), 2)])
@@ -186,7 +193,13 @@ def calculate_stats(input_text):
 	# 	bi_freq[i]
 	return (mono_freq, bi_freq, H1, H2)
 
-
+def structural_criteria_outter(input_text, diff_limit=None):
+	before_compress_len = len(input_text.encode('utf-8'))
+	after_compress_len   = len(bz2.compress(bytes(input_text, encoding='utf-8'), compresslevel=9))
+	#print(before_compress_len, after_compress_len, diff_limit)
+	if(after_compress_len/before_compress_len >= diff_limit):
+		return False
+	return True
 
 def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=False):
 
@@ -267,9 +280,8 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 		j = criteria5_0_js['mono_case']['j3'] if mono_case else criteria5_0_js['bi_case']['j3']
 		return criteria5_0(input_text, mono_case=mono_case, j=j, k_empt=k_empt)
 
-
-	# # crit_1_1 params
-	# k_p = 20
+	def structural_criteria(input_text, diff_limit=None):
+		return structural_criteria_outter(input_text, diff_limit)
 
 	sorted_freq_mono = sorted(mono_freq, key=mono_freq.get)
 	sorted_freq_bi = sorted(bi_freq, key=bi_freq.get)
@@ -298,9 +310,16 @@ def check_criterias(text_pieces, mono_freq, bi_freq, H1, H2, sentient_ukr_text=F
 			f_prob_mono_non_dist = crit_results_mono_non_dist.count(False)/len(crit_results_mono_non_dist)
 			f_prob_bi_non_dist = crit_results_bi_non_dist.count(False)/len(crit_results_bi_non_dist)
 
-			print(f'    {crit_name:<15} {round(f_prob_mono_non_dist, 13):<15} {round(f_prob_mono_dist, 13):<15} {round(f_prob_bi_non_dist, 13):<15} {round(f_prob_bi_dist, 13):<15}')
+			f_p_mono_val = '--' if '5_1_j' in crit_name else round(f_prob_mono_non_dist, 13)
+			f_n_mono_val = '--' if '5_1_j' in crit_name else round(f_prob_mono_dist, 13)
+			print(f'    {crit_name:<15} {f_p_mono_val:<15} {f_n_mono_val:<15} {round(f_prob_bi_non_dist, 13):<15} {round(f_prob_bi_dist, 13):<15}')
 
-			
+		# Z = uniformly_distributed_text(len(dist_text_piece_group))
+		struct_crit_res_dist = list(map(functools.partial(structural_criteria, **struct_crit_params[L]), dist_text_piece_group))
+		struct_crit_res_non_dist = list(map(functools.partial(structural_criteria, **struct_crit_params[L]), non_dist_text_piece_group))
+		f_prob_struct_dist = struct_crit_res_dist.count(True)/len(struct_crit_res_dist)
+		f_prob_struct_non_dist = struct_crit_res_non_dist.count(False)/len(struct_crit_res_non_dist)
+		print(f'    {"structural":<15} {round(f_prob_struct_non_dist, 13):<15} {round(f_prob_struct_dist, 13):<15} {"--":<15} {"--":<15}')
 		
 if __name__ == '__main__':
 
@@ -313,6 +332,7 @@ if __name__ == '__main__':
 		(100,   10000),
 		(1000,  10000),
 		(10000, 1000)
+		# (10000, 5)
 	]
 
 	# need 10 mill, currently have 1 mill
@@ -375,6 +395,21 @@ if __name__ == '__main__':
 				'non_dist_text_piece_group': text_piece_group
 			})
 		check_criterias(distorted_text_piece_groups, *stats)
+
+	# is supper compressed to 44 symbols
+	non_sentient_text = 'а' * 10000
+	non_sentient_text_crit_res = structural_criteria_outter(non_sentient_text, **struct_crit_params[len(non_sentient_text)])
+	print("structural crit's result for non sentient text = ", non_sentient_text_crit_res)
+
+	# is supper compressed to 80 symbols
+	cycle_alph = itertools.cycle(ALPH)
+	non_sentient_text = ''.join([next(cycle_alph) for i in range(10000)])
+	non_sentient_text_crit_res = structural_criteria_outter(non_sentient_text, **struct_crit_params[len(non_sentient_text)])
+	print("structural crit's result for non sentient text = ", non_sentient_text_crit_res)
+
+	non_sentient_text = uniformly_distributed_text(10000)
+	non_sentient_text_crit_res = structural_criteria_outter(non_sentient_text, **struct_crit_params[len(non_sentient_text)])
+	print("structural crit's result for non sentient text = ", non_sentient_text_crit_res)
 
 	# # for pure ukr literature
 	# print(f'checking criteria for pure ukraining text')

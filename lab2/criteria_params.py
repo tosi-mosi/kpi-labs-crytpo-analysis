@@ -1,4 +1,11 @@
 import collections
+import itertools
+
+# c_to_v_mapping = dict(zip(ALPH, itertools.count(0)))
+# v_to_c_mapping = {v: k for k, v in c_to_v_mapping.items()}
+
+# cc_to_v_mapping = dict(zip(map(lambda x: "".join(x), itertools.product(ALPH, repeat=2)), itertools.count(0)))
+# v_to_cc_mapping = {v: k for k, v in cc_to_v_mapping.items()}
 
 # maybe different A_prh lengths for different Ls ?
 A_prh_sizes = {
@@ -791,3 +798,10 @@ for dist_method, crits in criterias_and_params.items():
 				for L, params in L_cases.items():
 					criterias_and_params[dist_method][crit][l_case][L]['a_prh_size'] = A_prh_sizes[l_case][L]
 					#print("smth")
+
+struct_crit_params = {
+	10:	   { 'diff_limit': 2.55  }, # does it have sense ?
+	100:   { 'diff_limit': 0.615 }, # does it have sense ?
+	1000:  { 'diff_limit': 0.34  },
+	10000: { 'diff_limit': 0.3   },
+}
