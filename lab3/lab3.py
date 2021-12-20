@@ -12,10 +12,24 @@ def gcd (a, b) :
         u, u0 = u0, u - u0 * q
     return (a, u, v)
 
-def chineserem (lC, ln, Me) :
+#system of following type:
+#C_1 = M^e (mod n_1)
+#. . . . . . . . . .
+#C_k = M^e (mon n_k)
+#
+#lC = [C_1, ... , C_k]
+#ln = [n_1, ... , n_k]
+def chineserem (lC, ln) :
     n = np.prod(ln)
     lN = [n / ni for ni in n]
     lM = [gcd(Ni, ni)[2] for Ni, ni in zip(lN, ln)]
-    C = np.prod([Me * Ni * Mi for Ni, Mi in zip(lN, lM)])
+    C = np.sum([Ci * Ni * Mi for Ci, Ni, Mi in zip(Ci, lN, lM)]) % n
     return C
+
+#sense of arguments same as in chineserem
+def SE_attack (lC, ln, e) :
+    C = chineserem(lC, ln)
+    M = C ** (1 / float(e))
+    return M
+
 
