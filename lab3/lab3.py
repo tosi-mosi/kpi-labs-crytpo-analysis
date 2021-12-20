@@ -32,4 +32,14 @@ def SE_attack (lC, ln, e) :
     M = C ** (1 / float(e))
     return M
 
+def read_params (file) :
+    params = file.readlines()
+    lC = []
+    ln = []
+    for line in params :
+        if line[0] == 'C' :
+            lC.append(line)
+        if line[0] == 'N' :
+            lN.append(line)
+    return lC, ln
 
