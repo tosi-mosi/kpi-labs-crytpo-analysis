@@ -45,7 +45,7 @@ def read_params (file) :
 
 #meeting in the middle
 #e is stated to be 65537
-def MitM_attack (C, n, e, l) :
+def MitM_attack (C, n, e=65537, l=20) :
     X = []
     S = 0
     C_S = 0
@@ -60,4 +60,8 @@ def MitM_attack (C, n, e, l) :
             T = X.index(C_S)
             #if successful return plaintext M = T * S
             return T * S
+        except ValueError :
+            pass
+
+    return "no plaintext found"
 
