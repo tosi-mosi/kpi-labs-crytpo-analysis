@@ -1,7 +1,7 @@
 import numpy as np
 
 def encrypt (m, e, n) :
-    return (m ** e) % n
+    return pow(m, e, n)
 
 def gcd (a, b) :
     v, v0, u, u0 = 1, 0, 0, 1
@@ -42,4 +42,22 @@ def read_params (file) :
         if line[0] == 'N' :
             lN.append(line)
     return lC, ln
+
+#meeting in the middle
+#e is stated to be 65537
+def MitM_attack (C, n, e, l) :
+    X = []
+    S = 0
+    C_S = 0
+
+    for T in range(0, 2 ** l + 1) :
+        X.append(encrypt(T, e, n))
+
+    for S in range(0, 2 ** l + 1) :
+        try :
+            #C_S = C * S^(-e) mod n
+            C_S = pow(C * gcd(X[S])[2], 1, n)
+            T = X.index(C_S)
+            #if successful return plaintext M = T * S
+            return T * S
 
