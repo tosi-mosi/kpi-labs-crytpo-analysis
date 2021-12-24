@@ -1,5 +1,31 @@
 import numpy as np
 
+#python does not provide a sensible way
+#to calculate root of a large integer
+#therefore I decided to use a simle implementation
+#based on bisection method
+def root (x, n) :
+    #choose initial boundaries for x^(1/n)
+    b = 1
+    while b ** n <= x :
+        b *= 2
+    a = b // 2
+
+    while a < b :
+        #bisection
+        c = (a + b) // 2
+        aux = c ** n
+        #then either we are too low
+        if a < c and aux < x :
+            a = c
+        #or too high
+        elif b > c and aux > x :
+            b = c
+        #or we have found the root
+        else :
+            return c
+    return c + 1
+
 def encrypt (m, e, n) :
     return pow(m, e, n)
 
@@ -21,9 +47,9 @@ def gcd (a, b) :
 #ln = [n_1, ... , n_k]
 def chineserem (lC, ln) :
     n = np.prod(ln)
-    lN = [n / ni for ni in n]
+    lN = [n // ni for ni in ln]
     lM = [gcd(Ni, ni)[2] for Ni, ni in zip(lN, ln)]
-    C = np.sum([Ci * Ni * Mi for Ci, Ni, Mi in zip(Ci, lN, lM)]) % n
+    C = np.sum([Ci * Ni * Mi for Ci, Ni, Mi in zip(lC, lN, lM)]) % n
     return C
 
 #sense of arguments same as in chineserem
@@ -38,9 +64,9 @@ def read_params (file) :
     ln = []
     for line in params :
         if line[0] == 'C' :
-            lC.append(line)
+            lC.append(int(line[7:], 16))
         if line[0] == 'N' :
-            lN.append(line)
+            ln.append(int(line[7:], 16))
     return lC, ln
 
 #meeting in the middle
@@ -57,11 +83,21 @@ def MitM_attack (C, n, e=65537, l=20) :
         try :
             #C_S = C * S^(-e) mod n
             C_S = pow(C * gcd(X[S])[2], 1, n)
-            T = X.index(C_S)
+            T = X.index(C_S) #throws ValueError exception if no match is found
             #if successful return plaintext M = T * S
             return T * S
         except ValueError :
             pass
 
     return "no plaintext found"
+
+SE_location = "08-SE.txt"
+MitM_location = "08-MitM.txt"
+
+#SE attack
+e = 3 #given in the text of the task
+file_SE = open(SE_location, "r")
+lC, ln = read_params(file_SE)
+M = SE_attack(lC, ln, e)
+print(f'Retieved plaintext: {M}')
 
