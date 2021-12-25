@@ -1,0 +1,21 @@
+Function: void mpz_init_set (mpz_t rop, const mpz_t op)
+Function: void mpz_init_set_ui (mpz_t rop, unsigned long int op)
+Function: int mpz_init_set_str (mpz_t rop, const char *str, int base)
+	Initialize rop and set its value like mpz_set_str (see its documentation above for details).
+
+Function: int mpz_root (mpz_t rop, const mpz_t op, unsigned long int n)
+	Set rop to the truncated integer part of the nth root of op. Return non-zero if the computation was exact, i.e., if op is rop to the nth power.
+
+Function: void mpz_mul (mpz_t rop, const mpz_t op1, const mpz_t op2)
+
+Function: void mpz_powm (mpz_t rop, const mpz_t base, const mpz_t exp, const mpz_t mod)
+Function: void mpz_powm_ui (mpz_t rop, const mpz_t base, unsigned long int exp, const mpz_t mod)
+	Set rop to (base raised to exp) modulo mod.
+
+Function: int mpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2)
+	Compute the inverse of op1 modulo op2 and put the result in rop.
+
+Function: int mpz_cmp (const mpz_t op1, const mpz_t op2)
+	Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative value if op1 < op2.
+
+
