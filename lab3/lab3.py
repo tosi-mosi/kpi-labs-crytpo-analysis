@@ -93,7 +93,7 @@ def MitM_attack (C, n, e=65537, l=20) :
     return "no plaintext found"
 
 SE_location = "08-SE.txt"
-MitM_location = "08.txt"
+MitM_location = "08-MitM.txt"
 
 #SE attack
 e = 3 #given in the text of the task
